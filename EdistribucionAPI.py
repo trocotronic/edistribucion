@@ -214,7 +214,17 @@ class Edistribucion():
         data = {
             'message': '{"actions":[{"id":"270;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCUPSReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_ICP","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
             }
-        r = self.__command('other.WP_Monitor_CTRL.getLoginInfo=1', post=data)
+        r = self.__command('other.WP_ContadorICP_CTRL.getCUPSReconectarICP=1', post=data)
         return r
+    
+    def get_contador(self, cups):
+        data = {
+            'message': '{"actions":[{"id":"522;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$consultarContador","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_ContadorICP_CTRL.consultarContador=1', post=data)
+        return r
+    
+    
+    
         
         
