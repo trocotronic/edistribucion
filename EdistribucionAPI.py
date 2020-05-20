@@ -217,7 +217,14 @@ class Edistribucion():
         r = self.__command('other.WP_ContadorICP_CTRL.getCUPSReconectarICP=1', post=data)
         return r
     
-    def get_contador(self, cups):
+    def get_cups_info(self, cups):
+        data = {
+            'message': '{"actions":[{"id":"489;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCupsInfo","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_ContadorICP_CTRL.getCupsInfo=1', post=data)
+        return r
+    
+    def get_meter(self, cups):
         data = {
             'message': '{"actions":[{"id":"522;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$consultarContador","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
             }
