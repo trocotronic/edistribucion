@@ -34,6 +34,8 @@ class Edistribucion():
     __credentials = {}
     __dashboard = 'https://zonaprivada.edistribucion.com/areaprivada/s/sfsites/aura?'
     __command_index = 0
+    __identities = {}
+    
     def __init__(self, user, password):
         self.__session = requests.Session()
         self.__credentials['user'] = user
@@ -48,6 +50,7 @@ class Edistribucion():
             with open(Edistribucion.ACCESS_FILE, 'rb') as f:
                 d = json.load(f)
                 self.__token = d['token']
+                self.__identities = d['identities']
         except FileNotFoundError:
             logging.warning('Access file not found')
         
@@ -121,7 +124,9 @@ class Edistribucion():
                 logging.warning('Redirection received twice. Aborting command.')
         if ('json' in r.headers['Content-Type']):
             jr = r.json()
-            return jr
+            if (jr['actions'][0]['state'] != 'SUCCESS'):
+                raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
+            return jr['actions'][0]['returnValue']
         return r
     
     def __check_tokens(self):
@@ -131,6 +136,7 @@ class Edistribucion():
     def __save_access(self):
         t = {}
         t['token'] = self.__token
+        t['identities'] = self.__identities
         with open(Edistribucion.ACCESS_FILE, 'w') as f:
             json.dump(t, f)
         logging.info('Saving access to file')
@@ -166,6 +172,8 @@ class Edistribucion():
                 'aura.token':'undefined',
                 }
         r = self.__get_url(self.__dashboard+'other.LightningLoginForm.login=1',post=data)
+        if ('/*ERROR*/' in r.text):
+            raise EdisError('Unexpected error in loginForm. Cannot continue')
         jr = r.json()
         if ('events' not in jr):
             raise EdisError('Wrong login response. Cannot continue')
@@ -184,6 +192,12 @@ class Edistribucion():
         self.__token = jr['token']
         logging.info('Token received!')
         logging.debug(self.__token)
+        logging.info('Retreiving account info')
+        r = self.get_login_info()
+        self.__identities['account_id'] = r['visibility']['Id']
+        self.__identities['name'] = r['Name']
+        logging.info('Received name: %s (%s)',r['Name'],r['visibility']['Visible_Account__r']['Identity_number__c'])
+        logging.debug('Account_id: %s', self.__identities['account_id'])
         with open(Edistribucion.SESSION_FILE, 'wb') as f:
             pickle.dump(self.__session.cookies, f)
         logging.debug('Saving session')
@@ -192,6 +206,13 @@ class Edistribucion():
     def get_login_info(self):
         data = {
             'message': '{"actions":[{"id":"215;a","descriptor":"apex://WP_Monitor_CTRL/ACTION$getLoginInfo","callingDescriptor":"markup://c:WP_Monitor","params":{"serviceNumber":"S011"}}]}',
+            }
+        r = self.__command('other.WP_Monitor_CTRL.getLoginInfo=1', post=data)
+        return r
+        
+    def get_cups(self):
+        data = {
+            'message': '{"actions":[{"id":"270;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCUPSReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_ICP","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
             }
         r = self.__command('other.WP_Monitor_CTRL.getLoginInfo=1', post=data)
         return r
