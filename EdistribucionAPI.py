@@ -258,6 +258,13 @@ class Edistribucion():
         r = self.__command('other.WP_CUPSDetail_CTRL.getStatus=1', post=data)
         return r
     
+    def get_atr_detail(self, atr):
+        data = {
+            'message': '{"actions":[{"id":"62;a","descriptor":"apex://WP_ContractATRDetail_CTRL/ACTION$getATRDetail","callingDescriptor":"markup://c:WP_SuppliesATRDetailForm","params":{"atrId":"'+atr+'"}}]}',
+            }
+        r = self.__command('other.WP_ContractATRDetail_CTRL.getATRDetail=1', post=data)
+        return r
+    
     
     
     
