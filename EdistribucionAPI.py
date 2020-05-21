@@ -125,7 +125,13 @@ class Edistribucion():
         if ('json' in r.headers['Content-Type']):
             jr = r.json()
             if (jr['actions'][0]['state'] != 'SUCCESS'):
-                raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
+                if (not recurrent):
+                    logging.info('Error received. Fetching credentials again.')
+                    self.__force_login()
+                    self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recurrent=True)
+                else:
+                    logging.warning('Error received twice. Aborting command.')
+                    raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
             return jr['actions'][0]['returnValue']
         return r
     
@@ -237,6 +243,8 @@ class Edistribucion():
             }
         r = self.__command('other.WP_ConsultaSuministros.getAllCUPS=1', post=data)
         return r
+    
+    
     
     
     
