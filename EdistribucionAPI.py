@@ -251,6 +251,13 @@ class Edistribucion():
         r = self.__command('other.WP_CUPSDetail_CTRL.getCUPSDetail=1', post=data)
         return r
     
+    def get_cups_status(self, cups):
+        data = {
+            'message': '{"actions":[{"id":"629;a","descriptor":"apex://WP_CUPSDetail_CTRL/ACTION$getStatus","callingDescriptor":"markup://c:WP_cupsDetail","params":{"cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_CUPSDetail_CTRL.getStatus=1', post=data)
+        return r
+    
     
     
     
