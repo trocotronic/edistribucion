@@ -265,6 +265,13 @@ class Edistribucion():
         r = self.__command('other.WP_ContractATRDetail_CTRL.getATRDetail=1', post=data)
         return r
     
+    def get_solicitud_atr_detail(self, sol):
+        data = {
+            'message': '{"actions":[{"id":"56;a","descriptor":"apex://WP_SolicitudATRDetail_CTRL/ACTION$getSolicitudATRDetail","callingDescriptor":"markup://c:WP_ATR_Requests_Detail_Form","params":{"solId":"'+sol+'"}}]}',
+            }
+        r = self.__command('other.WP_SolicitudATRDetail_CTRL.getSolicitudATRDetail=1', post=data)
+        return r
+    
     
     
     
