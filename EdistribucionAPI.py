@@ -244,6 +244,12 @@ class Edistribucion():
         r = self.__command('other.WP_ConsultaSuministros.getAllCUPS=1', post=data)
         return r
     
+    def get_cups_detail(self, cups):
+        data = {
+            'message': '{"actions":[{"id":"490;a","descriptor":"apex://WP_CUPSDetail_CTRL/ACTION$getCUPSDetail","callingDescriptor":"markup://c:WP_cupsDetail","params":{"visSelected":"'+self.__identities['account_id']+'","cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_CUPSDetail_CTRL.getCUPSDetail=1', post=data)
+        return r
     
     
     
