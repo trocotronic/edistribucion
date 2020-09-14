@@ -8,10 +8,10 @@ Created on Wed May 20 11:42:56 2020
 
 import requests, pickle, json
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 import logging
 logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%d/%m/%Y %H:%M:%S')
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 
 class EdisError(Exception):
     def __init__(self, message):
@@ -35,8 +35,10 @@ class Edistribucion():
     __dashboard = 'https://zonaprivada.edistribucion.com/areaprivada/s/sfsites/aura?'
     __command_index = 0
     __identities = {}
+    __appInfo = None
+    __context = None
     
-    def __init__(self, user, password):
+    def __init__(self, user, password, debug_level=logging.INFO):
         self.__session = requests.Session()
         self.__credentials['user'] = user
         self.__credentials['password'] = password
@@ -51,8 +53,11 @@ class Edistribucion():
                 d = json.load(f)
                 self.__token = d['token']
                 self.__identities = d['identities']
+                self.__context = d['context']
         except FileNotFoundError:
             logging.warning('Access file not found')
+        
+        logging.getLogger().setLevel(debug_level)
         
     def __get_url(self, url,get=None,post=None,json=None,cookies=None,headers=None):
         __headers = {
@@ -95,7 +100,7 @@ class Edistribucion():
             self.__command_index += 1
         logging.info('Preparing command: %s', command)
         if (post):
-            post['aura.context'] = '{"mode":"PROD","fwuid":"5EkiQjrG-amda9Z1-HgsDQ","app":"siteforce:communityApp","loaded":{"APPLICATION@markup://siteforce:communityApp":"ide1NyqwEFjB0hcXqolx2Q"},"dn":[],"globals":{},"uad":false}'
+            post['aura.context'] = self.__context
             post['aura.pageURI'] = '/areaprivada/s/wp-online-access'
             post['aura.token'] = self.__token
             logging.debug('POST data: %s', post)
@@ -143,6 +148,7 @@ class Edistribucion():
         t = {}
         t['token'] = self.__token
         t['identities'] = self.__identities
+        t['context'] = self.__context
         with open(Edistribucion.ACCESS_FILE, 'w') as f:
             json.dump(t, f)
         logging.info('Saving access to file')
@@ -167,17 +173,22 @@ class Edistribucion():
             src = s.get('src')
             if (not src):
                 continue
+            print(s)
             upr = urlparse(r.url)
             r = self.__get_url(upr.scheme+'://'+upr.netloc+src)
-        
+            if ('resources.js' in src):
+                unq = unquote(src)
+                self.__context = unq[unq.find('{'):unq.rindex('}')+1]
+                self.__appInfo = json.loads(self.__context)
         logging.info('Performing login routine')
         data = {
                 'message':'{"actions":[{"id":"91;a","descriptor":"apex://LightningLoginFormController/ACTION$login","callingDescriptor":"markup://c:WP_LoginForm","params":{"username":"'+self.__credentials['user']+'","password":"'+self.__credentials['password']+'","startUrl":"/areaprivada/s/"}}]}',
-                'aura.context':'{"mode":"PROD","fwuid":"5EkiQjrG-amda9Z1-HgsDQ","app":"siteforce:loginApp2","loaded":{"APPLICATION@markup://siteforce:loginApp2":"QIjIXSLGqcgAH-oBcEbh6g"},"dn":[],"globals":{},"uad":false}',
+                'aura.context':self.__context,
                 'aura.pageURI':'/areaprivada/s/login/?language=es&startURL=%2Fareaprivada%2Fs%2F&ec=302',
                 'aura.token':'undefined',
                 }
         r = self.__get_url(self.__dashboard+'other.LightningLoginForm.login=1',post=data)
+        print(r.text)
         if ('/*ERROR*/' in r.text):
             raise EdisError('Unexpected error in loginForm. Cannot continue')
         jr = r.json()
