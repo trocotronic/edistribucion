@@ -6,7 +6,7 @@ Created on Wed May 20 11:51:36 2020
 @author: trocotronic
 """
 
-USER = 'you_login'
+USER = 'your_login'
 PASSWORD = 'your_pw'
 
 from EdistribucionAPI import Edistribucion
@@ -15,4 +15,6 @@ edis = Edistribucion(USER,PASSWORD)
 edis.login()
 r = edis.get_cups()
 cups = r['data']['lstCups'][0]['Id']
-print(cups)
+print('Cups: ',cups)
+meter = edis.get_meter(cups)
+print('Meter: ',meter)
