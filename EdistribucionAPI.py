@@ -283,9 +283,15 @@ class Edistribucion():
         r = self.__command('other.WP_SolicitudATRDetail_CTRL.getSolicitudATRDetail=1', post=data)
         return r
     
-    
-    
-    
-    
-        
+    def reconnect_ICP(self, cups):
+        data = {
+            'message': '{"actions":[{"id":"261;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$reconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Detail_F2","params":{"cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_ContadorICP_F2_CTRL.reconectarICP=1', post=data)
+        data = {
+            'message': '{"actions":[{"id":"287;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$goToReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Modal","params":{"cupsId":"'+cups+'"}}]}',
+            }
+        r = self.__command('other.WP_ContadorICP_CTRL.goToReconectarICP=1', post=data)
+        return r
+
         
