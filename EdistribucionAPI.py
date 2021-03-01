@@ -333,3 +333,9 @@ class Edistribucion():
                 conts.append(c)
         return conts
 
+    def get_list_cycles(self, cont):
+        data = {
+            'message': '{"actions":[{"id":"1190;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getInfo","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"contId":"'+cont+'"},"longRunning":true}]}',
+            }
+        r = self.__command('other.WP_Measure_v3_CTRL.getInfo=1', post=data)
+        return r['data']['lstCycles']
