@@ -6,9 +6,7 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
-__VERSION__ = 0.4
-
-import requests, pickle, json
+import requests, pickle, json, os
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, unquote
 import logging
@@ -315,4 +313,23 @@ class Edistribucion():
             }
         r = self.__command('other.WP_ContadorICP_CTRL.goToReconectarICP=1', post=data)
         return r
-      
+    
+    def get_list_cups(self):
+        data = {
+            'message': '{"actions":[{"id":"1086;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getListCups","callingDescriptor":"markup://c:WP_Measure_List_v4","params":{"sIdentificador":"'+self.__identities['account_id']+'"}}]}',
+            }
+        r = self.__command('other.WP_Measure_v3_CTRL.getListCups=1', post=data)
+        conts = []
+        for cont in r['data']['lstContAux']:
+            if (cont['Id'] in r['data']['lstIds']):
+                active = True
+                if ('Version_end_date__c' in cont):
+                    active = False
+                c = {}
+                c['CUPS'] = cont['CUPs__r']['Name']
+                c['CUPS_Id'] = cont['CUPs__r']['Id']
+                c['Id'] = cont['Id']
+                c['Active'] = active
+                conts.append(c)
+        return conts
+
