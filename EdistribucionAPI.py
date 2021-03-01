@@ -6,12 +6,19 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
+__VERSION__ = 0.4
+
 import requests, pickle, json
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, unquote
 import logging
+from datetime import datetime, timedelta
+from dateutil.tz import tzutc
+
+UTC = tzutc()
+
 logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%d/%m/%Y %H:%M:%S')
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.DEBUG)
 
 class EdisError(Exception):
     def __init__(self, message):
@@ -25,6 +32,18 @@ class UrlError(EdisError):
         super().__init__(message)
     pass
 
+def serialize_date(dt):
+    """
+    Serialize a date/time value into an ISO8601 text representation
+    adjusted (if needed) to UTC timezone.
+
+    For instance:
+    >>> serialize_date(datetime(2012, 4, 10, 22, 38, 20, 604391))
+    '2012-04-10T22:38:20.604391Z'
+    """
+    if dt.tzinfo:
+        dt = dt.astimezone(UTC).replace(tzinfo=None)
+    return dt.isoformat() 
 
 class Edistribucion():
     __session = None
@@ -37,6 +56,7 @@ class Edistribucion():
     __identities = {}
     __appInfo = None
     __context = None
+    __access_date = datetime.now()
     
     def __init__(self, user, password, debug_level=logging.INFO):
         self.__session = requests.Session()
@@ -54,6 +74,7 @@ class Edistribucion():
                 self.__token = d['token']
                 self.__identities = d['identities']
                 self.__context = d['context']
+                self.__access_date = datetime.fromisoformat(d['date'])
         except FileNotFoundError:
             logging.warning('Access file not found')
         
@@ -120,7 +141,7 @@ class Edistribucion():
         if (accept):
             headers['Accept'] = accept
         r = self.__get_url(dashboard+command, post=post, headers=headers)
-        if ('window.location.href' in r.text):
+        if ('window.location.href' in r.text or 'clientOutOfSync' in r.text):
             if (not recurrent):
                 logging.info('Redirection received. Fetching credentials again.')
                 self.__force_login()
@@ -142,19 +163,20 @@ class Edistribucion():
     
     def __check_tokens(self):
         logging.debug('Checking tokens')
-        return self.__token != 'undefined'
+        return self.__token != 'undefined' and self.__access_date+timedelta(minutes=10) > datetime.now()
         
     def __save_access(self):
         t = {}
         t['token'] = self.__token
         t['identities'] = self.__identities
         t['context'] = self.__context
+        t['date'] = datetime.now()
         with open(Edistribucion.ACCESS_FILE, 'w') as f:
-            json.dump(t, f)
+            json.dump(t, f, default=serialize_date)
         logging.info('Saving access to file')
         
     def login(self):
-        logging.info('Logging')
+        logging.info('Loging')
         if (not self.__check_tokens()):
             return self.__force_login()
         return True
@@ -293,5 +315,4 @@ class Edistribucion():
             }
         r = self.__command('other.WP_ContadorICP_CTRL.goToReconectarICP=1', post=data)
         return r
-
-        
+      
