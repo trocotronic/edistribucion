@@ -339,3 +339,12 @@ class Edistribucion():
             }
         r = self.__command('other.WP_Measure_v3_CTRL.getInfo=1', post=data)
         return r['data']['lstCycles']
+        
+      
+    def get_meas(self, cont, cycle):
+        data = {
+            'message': '{"actions":[{"id":"1295;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPoints","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"cupsId":"'+cont+'","dateRange":"'+cycle['label']+'","cfactura":"'+cycle['value']+'"},"longRunning":true}]}',
+            }
+        r = self.__command('other.WP_Measure_v3_CTRL.getChartPoints=1', post=data)
+        return r['data']['lstData']
+    
