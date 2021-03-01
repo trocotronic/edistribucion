@@ -6,7 +6,9 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
-import requests, pickle, json, os
+__VERSION__ = 0.4
+
+import requests, pickle, json, os, math
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, unquote
 import logging
@@ -111,7 +113,7 @@ class Edistribucion():
             raise UrlError(r.status_code, msg, r)
         return r
     
-    def __command(self, command, post=None, dashboard=None, accept='*/*', content_type=None, recurrent=False):
+    def __command(self, command, post=None, dashboard=None, accept='*/*', content_type=None, recursive=False):
         if (not dashboard):
             dashboard = self.__dashboard
         if (self.__command_index):
@@ -128,11 +130,13 @@ class Edistribucion():
             logging.debug('Accept: %s', accept)
         if (content_type):
             logging.debug('Content-tpye: %s', content_type)
+            '''
         try:
             if (not self.__check_tokens()):
                 self.__force_login()
         except UrlError as e:
             raise EdisError('Aborting command {}: login failed ({})'.format(command,e.message))
+            '''
         headers = {}
         if (content_type):
             headers['Content-Type'] = content_type
@@ -140,19 +144,23 @@ class Edistribucion():
             headers['Accept'] = accept
         r = self.__get_url(dashboard+command, post=post, headers=headers)
         if ('window.location.href' in r.text or 'clientOutOfSync' in r.text):
-            if (not recurrent):
+            if (not recursive):
                 logging.info('Redirection received. Fetching credentials again.')
+                
+                self.__session = requests.Session()
                 self.__force_login()
-                self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recurrent=True)
+                self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recursive=True)
             else:
                 logging.warning('Redirection received twice. Aborting command.')
         if ('json' in r.headers['Content-Type']):
             jr = r.json()
             if (jr['actions'][0]['state'] != 'SUCCESS'):
-                if (not recurrent):
+                if (not recursive):
                     logging.info('Error received. Fetching credentials again.')
+                    
+                    self.__session = requests.Session()
                     self.__force_login()
-                    self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recurrent=True)
+                    self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recursive=True)
                 else:
                     logging.warning('Error received twice. Aborting command.')
                     raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
@@ -176,10 +184,11 @@ class Edistribucion():
     def login(self):
         logging.info('Loging')
         if (not self.__check_tokens()):
+            self.__session = requests.Session()
             return self.__force_login()
         return True
     
-    def __force_login(self):
+    def __force_login(self, recursive=False):
         logging.warning('Forcing login')
         r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
         ix = r.text.find('auraConfig')
@@ -210,6 +219,9 @@ class Edistribucion():
         r = self.__get_url(self.__dashboard+'other.LightningLoginForm.login=1',post=data)
         print(r.text)
         if ('/*ERROR*/' in r.text):
+            if ('invalidSession' in r.text and not recursive):
+                self.__session = requests.Session()
+                self.__force_login(recursive=True)
             raise EdisError('Unexpected error in loginForm. Cannot continue')
         jr = r.json()
         if ('events' not in jr):
@@ -320,22 +332,21 @@ class Edistribucion():
             }
         r = self.__command('other.WP_Measure_v3_CTRL.getListCups=1', post=data)
         conts = []
-        for cont in r['data']['lstContAux']:
+        for cont in r['data']['lstCups']:
             if (cont['Id'] in r['data']['lstIds']):
-                active = True
-                if ('Version_end_date__c' in cont):
-                    active = False
                 c = {}
                 c['CUPS'] = cont['CUPs__r']['Name']
                 c['CUPS_Id'] = cont['CUPs__r']['Id']
                 c['Id'] = cont['Id']
-                c['Active'] = active
+                c['Active'] = False if 'Version_end_date__c' in cont else True
+                c['Power'] = cont['Requested_power_1__c']
+                c['Rate'] = cont['rate']
                 conts.append(c)
         return conts
 
     def get_list_cycles(self, cont):
         data = {
-            'message': '{"actions":[{"id":"1190;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getInfo","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"contId":"'+cont+'"},"longRunning":true}]}',
+            'message': '{"actions":[{"id":"1190;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getInfo","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"contId":"'+cont['Id']+'"},"longRunning":true}]}',
             }
         r = self.__command('other.WP_Measure_v3_CTRL.getInfo=1', post=data)
         return r['data']['lstCycles']
@@ -343,8 +354,9 @@ class Edistribucion():
       
     def get_meas(self, cont, cycle):
         data = {
-            'message': '{"actions":[{"id":"1295;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPoints","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"cupsId":"'+cont+'","dateRange":"'+cycle['label']+'","cfactura":"'+cycle['value']+'"},"longRunning":true}]}',
+            'message': '{"actions":[{"id":"1295;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPoints","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"cupsId":"'+cont['Id']+'","dateRange":"'+cycle['label']+'","cfactura":"'+cycle['value']+'"},"longRunning":true}]}',
             }
         r = self.__command('other.WP_Measure_v3_CTRL.getChartPoints=1', post=data)
         return r['data']['lstData']
-    
+
+        
