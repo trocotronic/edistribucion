@@ -6,7 +6,7 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
-__VERSION__ = 0.4
+__VERSION__ = 0.4.1
 
 import requests, pickle, json, os, math
 from bs4 import BeautifulSoup
@@ -163,7 +163,7 @@ class Edistribucion():
                     self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recursive=True)
                 else:
                     logging.warning('Error received twice. Aborting command.')
-                    raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
+                    raise EdisError('Error processing command: {}'.format(jr['actions'][0]['error'][0]['message']))
             return jr['actions'][0]['returnValue']
         return r
     
@@ -261,23 +261,23 @@ class Edistribucion():
         
     def get_cups(self):
         data = {
-            'message': '{"actions":[{"id":"270;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCUPSReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_ICP","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
+            'message': '{"actions":[{"id":"270;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$getCUPSReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_ICP","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
             }
-        r = self.__command('other.WP_ContadorICP_CTRL.getCUPSReconectarICP=1', post=data)
+        r = self.__command('other.WP_ContadorICP_F2_CTRL.getCUPSReconectarICP=1', post=data)
         return r
     
     def get_cups_info(self, cups):
         data = {
-            'message': '{"actions":[{"id":"489;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCupsInfo","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
+            'message': '{"actions":[{"id":"489;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$getCupsInfo","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
             }
-        r = self.__command('other.WP_ContadorICP_CTRL.getCupsInfo=1', post=data)
+        r = self.__command('other.WP_ContadorICP_F2_CTRL.getCupsInfo=1', post=data)
         return r
     
     def get_meter(self, cups):
         data = {
-            'message': '{"actions":[{"id":"522;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$consultarContador","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
+            'message': '{"actions":[{"id":"522;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$consultarContador","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
             }
-        r = self.__command('other.WP_ContadorICP_CTRL.consultarContador=1', post=data)
+        r = self.__command('other.WP_ContadorICP_F2_CTRL.consultarContador=1', post=data)
         return r
     
     def get_all_cups(self):
@@ -321,9 +321,9 @@ class Edistribucion():
             }
         r = self.__command('other.WP_ContadorICP_F2_CTRL.reconectarICP=1', post=data)
         data = {
-            'message': '{"actions":[{"id":"287;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$goToReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Modal","params":{"cupsId":"'+cups+'"}}]}',
+            'message': '{"actions":[{"id":"287;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$goToReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Modal","params":{"cupsId":"'+cups+'"}}]}',
             }
-        r = self.__command('other.WP_ContadorICP_CTRL.goToReconectarICP=1', post=data)
+        r = self.__command('other.WP_ContadorICP_F2_CTRL.goToReconectarICP=1', post=data)
         return r
     
     def get_list_cups(self):
@@ -358,5 +358,4 @@ class Edistribucion():
             }
         r = self.__command('other.WP_Measure_v3_CTRL.getChartPoints=1', post=data)
         return r['data']['lstData']
-
-        
+    
