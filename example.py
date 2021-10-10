@@ -9,6 +9,9 @@ Created on Wed May 20 11:51:36 2020
 USER = 'your_login'
 PASSWORD = 'your_pw'
 
+import sys
+sys.path.append("./src")
+
 from EdistribucionAPI import Edistribucion
 
 edis = Edistribucion(USER,PASSWORD)
