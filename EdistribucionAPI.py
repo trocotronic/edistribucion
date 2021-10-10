@@ -63,6 +63,10 @@ class EdistribucionMessageAction(object):
         self._id = value
 
     @property
+    def command(self):
+        return ".".join(self._descriptor.split("/ACTION$"))
+
+    @property
     def descriptor(self):
         return f"apex://{self._descriptor}"
 
@@ -311,9 +315,11 @@ class Edistribucion():
         logging.debug('Saving session')
         self.__save_access()
 
-    def __run_action_command(self, action, command):
+    def __run_action_command(self, action, command=None):
         data = {'message': '{"actions":[' + str(action) + ']}'}
-        req = self.__command(f"other.{command}", post=data)
+        if not command:
+            command = action.command
+        req = self.__command(f"other.{command}=1", post=data)
         return req
             
     def get_login_info(self):
@@ -323,8 +329,7 @@ class Edistribucion():
             "WP_Monitor",
             {"serviceNumber": "S011"}
         )
-        command = "WP_Monitor_CTRL.getLoginInfo=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
         
     def get_cups(self):
         action = EdistribucionMessageAction(
@@ -333,8 +338,7 @@ class Edistribucion():
             "WP_Reconnect_ICP",
             {"visSelected": self.__identities['account_id']}
         )
-        command = "WP_ContadorICP_F2_CTRL.getCUPSReconectarICP=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_cups_info(self, cups):
         action = EdistribucionMessageAction(
@@ -343,8 +347,7 @@ class Edistribucion():
             "WP_Reconnect_Detail",
             {"cupsId": cups}
         )
-        command = "WP_ContadorICP_F2_CTRL.getCupsInfo=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_meter(self, cups):
         action = EdistribucionMessageAction(
@@ -353,8 +356,7 @@ class Edistribucion():
             "WP_Reconnect_Detail",
             {"cupsId": cups}
         )
-        command = "WP_ContadorICP_F2_CTRL.consultarContador=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_all_cups(self):
         action = EdistribucionMessageAction(
@@ -363,8 +365,7 @@ class Edistribucion():
             "WP_MySuppliesForm",
             {"visSelected": self.__identities['account_id']}
         )
-        command = "WP_ConsultaSuministros.getAllCUPS=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_cups_detail(self, cups):
         action = EdistribucionMessageAction(
@@ -373,8 +374,7 @@ class Edistribucion():
             "WP_cupsDetail",
             {"visSelected": self.__identities['account_id'], "cupsId": cups}
         )
-        command = "WP_CUPSDetail_CTRL.getCUPSDetail=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_cups_status(self, cups):
         action = EdistribucionMessageAction(
@@ -383,8 +383,7 @@ class Edistribucion():
             "WP_cupsDetail",
             {"cupsId": cups}
         )
-        command = "WP_CUPSDetail_CTRL.getStatus=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_atr_detail(self, atr):
         action = EdistribucionMessageAction(
@@ -393,8 +392,7 @@ class Edistribucion():
             "WP_SuppliesATRDetailForm",
             {"atrId": atr}
         )
-        command = "WP_ContractATRDetail_CTRL.getATRDetail=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def get_solicitud_atr_detail(self, sol):
         action = EdistribucionMessageAction(
@@ -403,8 +401,7 @@ class Edistribucion():
             "WP_ATR_Requests_Detail_Form",
             {"solId": sol}
         )
-        command = "WP_SolicitudATRDetail_CTRL.getSolicitudATRDetail=1"
-        return self.__run_action_command(action, command)
+        return self.__run_action_command(action)
     
     def reconnect_ICP(self, cups):
         action = EdistribucionMessageAction(
@@ -413,8 +410,7 @@ class Edistribucion():
             "WP_Reconnect_Detail_F2",
             {"cupsId": cups}
         )
-        command = "WP_ContadorICP_F2_CTRL.reconectarICP=1"
-        r = self.__run_action_command(action, command)
+        r = self.__run_action_command(action)
         # -----
         action = EdistribucionMessageAction(
             287,
@@ -422,8 +418,7 @@ class Edistribucion():
             "WP_Reconnect_Modal",
             {"cupsId": cups}
         )
-        command = "WP_ContadorICP_F2_CTRL.goToReconectarICP=1"
-        r = self.__run_action_command(action, command)
+        r = self.__run_action_command(action)
 
         return r
     
@@ -434,8 +429,7 @@ class Edistribucion():
             "WP_Measure_List_v4",
             {"sIdentificador": self.__identities['account_id']}
         )
-        command = "WP_Measure_v3_CTRL.getListCups=1"
-        r = self.__run_action_command(action, command)
+        r = self.__run_action_command(action)
 
         conts = []
         for cont in r['data']['lstCups']:
@@ -458,9 +452,8 @@ class Edistribucion():
             {"contId": cont['Id']}
         )
         action.add_field("longRunning", True)
-        command = "WP_Measure_v3_CTRL.getInfo=1"
 
-        r = self.__run_action_command(action, command)
+        r = self.__run_action_command(action)
         return r['data']['lstCycles']
       
     def get_meas(self, cont, cycle):
@@ -471,8 +464,7 @@ class Edistribucion():
             {"cupsId": cont['Id'], "dateRange": cycle['label'], "cfactura": cycle['value']}
         )
         action.add_field("longRunning", True)
-        command = "WP_Measure_v3_CTRL.getChartPoints=1"
 
-        r = self.__run_action_command(action, command)
+        r = self.__run_action_command(action)
         return r['data']['lstData']
     
