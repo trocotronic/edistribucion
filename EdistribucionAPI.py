@@ -14,6 +14,7 @@ from urllib.parse import urlparse, unquote
 import logging
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
+import credentials
 
 UTC = tzutc()
 
@@ -108,10 +109,10 @@ class Edistribucion():
     __context = None
     __access_date = datetime.now()
     
-    def __init__(self, user, password, debug_level=logging.INFO):
+    def __init__(self, debug_level=logging.INFO):
         self.__session = requests.Session()
-        self.__credentials['user'] = user
-        self.__credentials['password'] = password
+        self.__credentials['user'] = credentials.username
+        self.__credentials['password'] = credentials.password
         
         try:
             with open(Edistribucion.SESSION_FILE, 'rb') as f:
