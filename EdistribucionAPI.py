@@ -359,4 +359,10 @@ class Edistribucion():
         r = self.__command('other.WP_Measure_v3_CTRL.getChartPoints=1', post=data)
         return r['data']['lstData']
 
-        
+    def get_meas_interval(self, cont, startDate, endDate):
+        data = {
+            'message': '{"actions":[{"id":"246;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPointsByRange","callingDescriptor":"markup://c:WP_Measure_Detail_Filter_Advanced_v3","params":{"contId":"'+cont['Id']+'","type":"4","startDate":"'+startDate+'","endDate":"'+endDate+'"},"version":null}]}',
+            }
+        r = self.__command('other.WP_Measure_v3_CTRL.getChartPointsByRange=1', post=data)
+        return r['data']
+    
