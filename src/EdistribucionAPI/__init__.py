@@ -6,7 +6,7 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
-__VERSION__ = 0.4
+__VERSION__ = '0.4.2'
 
 import requests, pickle, json, os, math
 from bs4 import BeautifulSoup
@@ -14,6 +14,7 @@ from urllib.parse import urlparse, unquote
 import logging
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
+import credentials
 
 UTC = tzutc()
 
@@ -31,6 +32,56 @@ class UrlError(EdisError):
         self.request = request
         super().__init__(message)
     pass
+
+class EdistribucionMessageAction(object):
+    def __init__(self, id_: int, descriptor, callingDescriptor, params: dict):
+        self.id = id_
+        self.descriptor = descriptor
+        self.callingDescriptor = callingDescriptor
+        self.params = params
+        self._extras = {}
+
+    def __str__(self):
+        data = {
+            "id": self.id,
+            "descriptor": self.descriptor,
+            "callingDescriptor": self.callingDescriptor,
+            "params": self.params
+        }
+        if self._extras:
+            data.update(self._extras)
+        return json.dumps(data)
+
+    def add_field(self, key, value):
+        self._extras[key] = value
+
+    @property
+    def id(self):
+        return f"{self._id};a"
+
+    @id.setter
+    def id(self, value):
+        self._id = value
+
+    @property
+    def command(self):
+        return ".".join(self._descriptor.split("/ACTION$"))
+
+    @property
+    def descriptor(self):
+        return f"apex://{self._descriptor}"
+
+    @descriptor.setter
+    def descriptor(self, value):
+        self._descriptor = value
+
+    @property
+    def callingDescriptor(self):
+        return f"markup://c:{self._callingDescriptor}"
+
+    @callingDescriptor.setter
+    def callingDescriptor(self, value):
+        self._callingDescriptor = value
 
 def serialize_date(dt):
     """
@@ -58,10 +109,10 @@ class Edistribucion():
     __context = None
     __access_date = datetime.now()
     
-    def __init__(self, user, password, debug_level=logging.INFO):
+    def __init__(self, debug_level=logging.INFO):
         self.__session = requests.Session()
-        self.__credentials['user'] = user
-        self.__credentials['password'] = password
+        self.__credentials['user'] = credentials.username
+        self.__credentials['password'] = credentials.password
         
         try:
             with open(Edistribucion.SESSION_FILE, 'rb') as f:
@@ -129,7 +180,7 @@ class Edistribucion():
         if (accept):
             logging.debug('Accept: %s', accept)
         if (content_type):
-            logging.debug('Content-tpye: %s', content_type)
+            logging.debug('Content-type: %s', content_type)
             '''
         try:
             if (not self.__check_tokens()):
@@ -163,7 +214,7 @@ class Edistribucion():
                     self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recursive=True)
                 else:
                     logging.warning('Error received twice. Aborting command.')
-                    raise EdisError('Error processing command: {} ({})'.format(jr['actions'][0]['error'][0]['message'],jr['actions'][0]['error'][0]['exceptionType']))
+                    raise EdisError('Error processing command: {}'.format(jr['actions'][0]['error'][0]['message']))
             return jr['actions'][0]['returnValue']
         return r
     
@@ -210,8 +261,21 @@ class Edistribucion():
                 self.__context = unq[unq.find('{'):unq.rindex('}')+1]
                 self.__appInfo = json.loads(self.__context)
         logging.info('Performing login routine')
+
+        params = {
+            "username": self.__credentials['user'],
+            "password": self.__credentials['password'],
+            "startUrl": "/areaprivada/s/"
+        }
+        action = EdistribucionMessageAction(
+            91,
+            "LightningLoginFormController/ACTION$login",
+            "WP_LoginForm",
+            params
+        )
+
         data = {
-                'message':'{"actions":[{"id":"91;a","descriptor":"apex://LightningLoginFormController/ACTION$login","callingDescriptor":"markup://c:WP_LoginForm","params":{"username":"'+self.__credentials['user']+'","password":"'+self.__credentials['password']+'","startUrl":"/areaprivada/s/"}}]}',
+                'message': '{"actions":[' + str(action) + ']}',
                 'aura.context':self.__context,
                 'aura.pageURI':'/areaprivada/s/login/?language=es&startURL=%2Fareaprivada%2Fs%2F&ec=302',
                 'aura.token':'undefined',
@@ -251,86 +315,123 @@ class Edistribucion():
             pickle.dump(self.__session.cookies, f)
         logging.debug('Saving session')
         self.__save_access()
+
+    def __run_action_command(self, action, command=None):
+        data = {'message': '{"actions":[' + str(action) + ']}'}
+        if not command:
+            command = action.command
+        req = self.__command(f"other.{command}=1", post=data)
+        return req
             
     def get_login_info(self):
-        data = {
-            'message': '{"actions":[{"id":"215;a","descriptor":"apex://WP_Monitor_CTRL/ACTION$getLoginInfo","callingDescriptor":"markup://c:WP_Monitor","params":{"serviceNumber":"S011"}}]}',
-            }
-        r = self.__command('other.WP_Monitor_CTRL.getLoginInfo=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            215,
+            "WP_Monitor_CTRL/ACTION$getLoginInfo",
+            "WP_Monitor",
+            {"serviceNumber": "S011"}
+        )
+        return self.__run_action_command(action)
         
     def get_cups(self):
-        data = {
-            'message': '{"actions":[{"id":"270;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCUPSReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_ICP","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
-            }
-        r = self.__command('other.WP_ContadorICP_CTRL.getCUPSReconectarICP=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            270,
+            "WP_ContadorICP_F2_CTRL/ACTION$getCUPSReconectarICP",
+            "WP_Reconnect_ICP",
+            {"visSelected": self.__identities['account_id']}
+        )
+        return self.__run_action_command(action)
     
     def get_cups_info(self, cups):
-        data = {
-            'message': '{"actions":[{"id":"489;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$getCupsInfo","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_ContadorICP_CTRL.getCupsInfo=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            489,
+            "WP_ContadorICP_F2_CTRL/ACTION$getCupsInfo",
+            "WP_Reconnect_Detail",
+            {"cupsId": cups}
+        )
+        return self.__run_action_command(action)
     
     def get_meter(self, cups):
-        data = {
-            'message': '{"actions":[{"id":"522;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$consultarContador","callingDescriptor":"markup://c:WP_Reconnect_Detail","params":{"cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_ContadorICP_CTRL.consultarContador=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            522,
+            "WP_ContadorICP_F2_CTRL/ACTION$consultarContador",
+            "WP_Reconnect_Detail",
+            {"cupsId": cups}
+        )
+        return self.__run_action_command(action)
     
     def get_all_cups(self):
-        data = {
-            'message': '{"actions":[{"id":"294;a","descriptor":"apex://WP_ConsultaSuministros/ACTION$getAllCUPS","callingDescriptor":"markup://c:WP_MySuppliesForm","params":{"visSelected":"'+self.__identities['account_id']+'"}}]}',
-            }
-        r = self.__command('other.WP_ConsultaSuministros.getAllCUPS=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            294,
+            "WP_ConsultaSuministros/ACTION$getAllCUPS",
+            "WP_MySuppliesForm",
+            {"visSelected": self.__identities['account_id']}
+        )
+        return self.__run_action_command(action)
     
     def get_cups_detail(self, cups):
-        data = {
-            'message': '{"actions":[{"id":"490;a","descriptor":"apex://WP_CUPSDetail_CTRL/ACTION$getCUPSDetail","callingDescriptor":"markup://c:WP_cupsDetail","params":{"visSelected":"'+self.__identities['account_id']+'","cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_CUPSDetail_CTRL.getCUPSDetail=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            490,
+            "WP_CUPSDetail_CTRL/ACTION$getCUPSDetail",
+            "WP_cupsDetail",
+            {"visSelected": self.__identities['account_id'], "cupsId": cups}
+        )
+        return self.__run_action_command(action)
     
     def get_cups_status(self, cups):
-        data = {
-            'message': '{"actions":[{"id":"629;a","descriptor":"apex://WP_CUPSDetail_CTRL/ACTION$getStatus","callingDescriptor":"markup://c:WP_cupsDetail","params":{"cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_CUPSDetail_CTRL.getStatus=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            629,
+            "WP_CUPSDetail_CTRL/ACTION$getStatus",
+            "WP_cupsDetail",
+            {"cupsId": cups}
+        )
+        return self.__run_action_command(action)
     
     def get_atr_detail(self, atr):
-        data = {
-            'message': '{"actions":[{"id":"62;a","descriptor":"apex://WP_ContractATRDetail_CTRL/ACTION$getATRDetail","callingDescriptor":"markup://c:WP_SuppliesATRDetailForm","params":{"atrId":"'+atr+'"}}]}',
-            }
-        r = self.__command('other.WP_ContractATRDetail_CTRL.getATRDetail=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            62,
+            "WP_ContractATRDetail_CTRL/ACTION$getATRDetail",
+            "WP_SuppliesATRDetailForm",
+            {"atrId": atr}
+        )
+        return self.__run_action_command(action)
     
     def get_solicitud_atr_detail(self, sol):
-        data = {
-            'message': '{"actions":[{"id":"56;a","descriptor":"apex://WP_SolicitudATRDetail_CTRL/ACTION$getSolicitudATRDetail","callingDescriptor":"markup://c:WP_ATR_Requests_Detail_Form","params":{"solId":"'+sol+'"}}]}',
-            }
-        r = self.__command('other.WP_SolicitudATRDetail_CTRL.getSolicitudATRDetail=1', post=data)
-        return r
+        action = EdistribucionMessageAction(
+            56,
+            "WP_SolicitudATRDetail_CTRL/ACTION$getSolicitudATRDetail",
+            "WP_ATR_Requests_Detail_Form",
+            {"solId": sol}
+        )
+        return self.__run_action_command(action)
     
     def reconnect_ICP(self, cups):
-        data = {
-            'message': '{"actions":[{"id":"261;a","descriptor":"apex://WP_ContadorICP_F2_CTRL/ACTION$reconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Detail_F2","params":{"cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_ContadorICP_F2_CTRL.reconectarICP=1', post=data)
-        data = {
-            'message': '{"actions":[{"id":"287;a","descriptor":"apex://WP_ContadorICP_CTRL/ACTION$goToReconectarICP","callingDescriptor":"markup://c:WP_Reconnect_Modal","params":{"cupsId":"'+cups+'"}}]}',
-            }
-        r = self.__command('other.WP_ContadorICP_CTRL.goToReconectarICP=1', post=data)
+        action = EdistribucionMessageAction(
+            261,
+            "WP_ContadorICP_F2_CTRL/ACTION$reconectarICP",
+            "WP_Reconnect_Detail_F2",
+            {"cupsId": cups}
+        )
+        r = self.__run_action_command(action)
+        # -----
+        action = EdistribucionMessageAction(
+            287,
+            "WP_ContadorICP_F2_CTRL/ACTION$goToReconectarICP",
+            "WP_Reconnect_Modal",
+            {"cupsId": cups}
+        )
+        r = self.__run_action_command(action)
+
         return r
     
     def get_list_cups(self):
-        data = {
-            'message': '{"actions":[{"id":"1086;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getListCups","callingDescriptor":"markup://c:WP_Measure_List_v4","params":{"sIdentificador":"'+self.__identities['account_id']+'"}}]}',
-            }
-        r = self.__command('other.WP_Measure_v3_CTRL.getListCups=1', post=data)
+        action = EdistribucionMessageAction(
+            1086,
+            "WP_Measure_v3_CTRL/ACTION$getListCups",
+            "WP_Measure_List_v4",
+            {"sIdentificador": self.__identities['account_id']}
+        )
+        r = self.__run_action_command(action)
+
         conts = []
         for cont in r['data']['lstCups']:
             if (cont['Id'] in r['data']['lstIds']):
@@ -345,24 +446,26 @@ class Edistribucion():
         return conts
 
     def get_list_cycles(self, cont):
-        data = {
-            'message': '{"actions":[{"id":"1190;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getInfo","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"contId":"'+cont['Id']+'"},"longRunning":true}]}',
-            }
-        r = self.__command('other.WP_Measure_v3_CTRL.getInfo=1', post=data)
+        action = EdistribucionMessageAction(
+            1190,
+            "WP_Measure_v3_CTRL/ACTION$getInfo",
+            "WP_Measure_Detail_v4",
+            {"contId": cont['Id']}
+        )
+        action.add_field("longRunning", True)
+
+        r = self.__run_action_command(action)
         return r['data']['lstCycles']
-        
       
     def get_meas(self, cont, cycle):
-        data = {
-            'message': '{"actions":[{"id":"1295;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPoints","callingDescriptor":"markup://c:WP_Measure_Detail_v4","params":{"cupsId":"'+cont['Id']+'","dateRange":"'+cycle['label']+'","cfactura":"'+cycle['value']+'"},"longRunning":true}]}',
-            }
-        r = self.__command('other.WP_Measure_v3_CTRL.getChartPoints=1', post=data)
-        return r['data']['lstData']
+        action = EdistribucionMessageAction(
+            1295,
+            "WP_Measure_v3_CTRL/ACTION$getChartPoints",
+            "WP_Measure_Detail_v4",
+            {"cupsId": cont['Id'], "dateRange": cycle['label'], "cfactura": cycle['value']}
+        )
+        action.add_field("longRunning", True)
 
-    def get_meas_interval(self, cont, startDate, endDate):
-        data = {
-            'message': '{"actions":[{"id":"246;a","descriptor":"apex://WP_Measure_v3_CTRL/ACTION$getChartPointsByRange","callingDescriptor":"markup://c:WP_Measure_Detail_Filter_Advanced_v3","params":{"contId":"'+cont['Id']+'","type":"4","startDate":"'+startDate+'","endDate":"'+endDate+'"},"version":null}]}',
-            }
-        r = self.__command('other.WP_Measure_v3_CTRL.getChartPointsByRange=1', post=data)
-        return r['data']
+        r = self.__run_action_command(action)
+        return r['data']['lstData']
     
