@@ -468,3 +468,13 @@ class Edistribucion():
         r = self.__run_action_command(action)
         return r['data']['lstData']
 
+    def get_meas_interval(self, cont, startDate, endDate):
+        action = EdistribucionMessageAction(
+            1362,
+            "WP_Measure_v3_CTRL/ACTION$getChartPointsByRange",
+            "WP_Measure_Detail_Filter_Advanced_v3",
+            {"contId": cont['Id'], "startDate": startDate, "endDate": endDate}
+        )
+
+        r = self.__run_action_command(action)
+        return r['data']['lstData']
