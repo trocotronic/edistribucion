@@ -15,4 +15,4 @@ info = edis.get_cups_info(cups['CUPS_Id'])
 print(info)
 cycles = edis.get_list_cycles(cups)
 meas = edis.get_meas(cups, cycles[0]) # Contains all measured points per hour for the first cycle
-
+meas = edis.get_meas_interval(cups, '2022-12-01', '2022-12-31')
