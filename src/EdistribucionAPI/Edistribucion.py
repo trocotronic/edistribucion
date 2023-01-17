@@ -108,10 +108,10 @@ class Edistribucion():
     __context = None
     __access_date = datetime.now()
 
-    def __init__(self, debug_level=logging.INFO):
+    def __init__(self, login=None, password=None, debug_level=logging.INFO):
         self.__session = requests.Session()
-        self.__credentials['user'] = credentials.username
-        self.__credentials['password'] = credentials.password
+        self.__credentials['user'] = login or credentials.username
+        self.__credentials['password'] = password or credentials.password
 
         try:
             with open(Edistribucion.SESSION_FILE, 'rb') as f:
