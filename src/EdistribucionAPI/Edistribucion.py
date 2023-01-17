@@ -331,21 +331,25 @@ class Edistribucion():
         )
         return self.__run_action_command(action)
 
-    def get_cups(self):
+    def get_identities(self):
+        ids = self.get_login_info()
+        return ids.get('authList',[])
+
+    def get_cups(self, vis=None):
         action = EdistribucionMessageAction(
             270,
             "WP_ContadorICP_F2_CTRL/ACTION$getCUPSReconectarICP",
             "WP_Reconnect_ICP",
-            {"visSelected": self.__identities['account_id']}
+            {"visSelected": vis or self.__identities['account_id']}
         )
         return self.__run_action_command(action)
 
-    def get_cups_info(self, cups):
+    def get_cups_info(self, cups, vis=None):
         action = EdistribucionMessageAction(
             489,
             "WP_ContadorICP_F2_CTRL/ACTION$getCupsInfo",
             "WP_Reconnect_Detail_F2",
-            {"cupsId": cups, "visSelected": self.__identities['account_id']}
+            {"cupsId": cups, "visSelected": vis or self.__identities['account_id']}
         )
         return self.__run_action_command(action)
 
@@ -358,21 +362,21 @@ class Edistribucion():
         )
         return self.__run_action_command(action)
 
-    def get_all_cups(self):
+    def get_all_cups(self, vis=None):
         action = EdistribucionMessageAction(
             294,
             "WP_ConsultaSuministros/ACTION$getAllCUPS",
             "WP_MySuppliesForm",
-            {"visSelected": self.__identities['account_id']}
+            {"visSelected": vis or self.__identities['account_id']}
         )
         return self.__run_action_command(action)
 
-    def get_cups_detail(self, cups):
+    def get_cups_detail(self, cups, vis=None):
         action = EdistribucionMessageAction(
             490,
             "WP_CUPSDetail_CTRL/ACTION$getCUPSDetail",
             "WP_cupsDetail",
-            {"visSelected": self.__identities['account_id'], "cupsId": cups}
+            {"visSelected": vis or self.__identities['account_id'], "cupsId": cups}
         )
         return self.__run_action_command(action)
 
@@ -422,12 +426,12 @@ class Edistribucion():
 
         return r
 
-    def get_list_cups(self):
+    def get_list_cups(self, vis=None):
         action = EdistribucionMessageAction(
             1086,
             "WP_Measure_v3_CTRL/ACTION$getListCups",
             "WP_Measure_List_v4",
-            {"sIdentificador": self.__identities['account_id']}
+            {"sIdentificador": vis or self.__identities['account_id']}
         )
         r = self.__run_action_command(action)
 
