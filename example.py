@@ -9,7 +9,6 @@ Created on Wed May 20 11:51:36 2020
 from EdistribucionAPI import Edistribucion
 
 edis = Edistribucion()
-edis.login()
 r = edis.get_cups()
 cups = r['data']['lstCups'][0]['Id']
 print('Cups: ',cups)

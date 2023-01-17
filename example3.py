@@ -12,7 +12,6 @@ Note: your user must be authorized by the owner of supply.
 from EdistribucionAPI import Edistribucion
 
 edis = Edistribucion()
-edis.login()
 identities = edis.get_identities()
 ## We use the first identity
 vis = identities[0]['value']

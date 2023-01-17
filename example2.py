@@ -11,7 +11,6 @@ This example show how to call cycle and measurements panel.
 from EdistribucionAPI import Edistribucion
 
 edis = Edistribucion()
-edis.login()
 cups = edis.get_list_cups()[-1]
 print('Cups: ',cups['CUPS_Id'])
 info = edis.get_cups_info(cups['CUPS_Id'])
