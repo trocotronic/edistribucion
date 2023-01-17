@@ -453,7 +453,7 @@ class Edistribucion():
             1190,
             "WP_Measure_v3_CTRL/ACTION$getInfo",
             "WP_Measure_Detail_v4",
-            {"contId": cont['Id']}
+            {"contId": cont}
         )
         action.add_field("longRunning", True)
 
@@ -465,7 +465,7 @@ class Edistribucion():
             1295,
             "WP_Measure_v3_CTRL/ACTION$getChartPoints",
             "WP_Measure_Detail_v4",
-            {"cupsId": cont['Id'], "dateRange": cycle['label'], "cfactura": cycle['value']}
+            {"cupsId": cont, "dateRange": cycle['label'], "cfactura": cycle['value']}
         )
         action.add_field("longRunning", True)
 
@@ -477,7 +477,7 @@ class Edistribucion():
             1362,
             "WP_Measure_v3_CTRL/ACTION$getChartPointsByRange",
             "WP_Measure_Detail_Filter_Advanced_v3",
-            {"contId": cont['Id'], "startDate": startDate, "endDate": endDate}
+            {"contId": cont, "startDate": startDate, "endDate": endDate}
         )
 
         r = self.__run_action_command(action)
