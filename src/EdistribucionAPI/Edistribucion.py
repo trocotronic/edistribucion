@@ -130,6 +130,8 @@ class Edistribucion():
 
         logging.getLogger().setLevel(debug_level)
 
+        self.login()
+
     def __get_url(self, url,get=None,post=None,json=None,cookies=None,headers=None):
         __headers = {
             'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:77.0) Gecko/20100101 Firefox/77.0',
