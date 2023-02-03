@@ -256,8 +256,8 @@ class Edistribucion():
                 continue
             print(s)
             upr = urlparse(r.url)
-            r = self.__get_url(upr.scheme+'://'+upr.netloc+src)
             if ('resources.js' in src):
+                r = self.__get_url(upr.scheme+'://'+upr.netloc+src)
                 unq = unquote(src)
                 self.__context = unq[unq.find('{'):unq.rindex('}')+1]
                 self.__appInfo = json.loads(self.__context)
