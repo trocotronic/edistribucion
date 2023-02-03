@@ -104,7 +104,6 @@ class Edistribucion():
     __dashboard = 'https://zonaprivada.edistribucion.com/areaprivada/s/sfsites/aura?'
     __command_index = 0
     __identities = {}
-    __appInfo = None
     __context = None
     __access_date = datetime.now()
 
@@ -254,13 +253,9 @@ class Edistribucion():
             src = s.get('src')
             if (not src):
                 continue
-            print(s)
-            upr = urlparse(r.url)
             if ('resources.js' in src):
-                r = self.__get_url(upr.scheme+'://'+upr.netloc+src)
                 unq = unquote(src)
                 self.__context = unq[unq.find('{'):unq.rindex('}')+1]
-                self.__appInfo = json.loads(self.__context)
         logging.info('Performing login routine')
 
         params = {
