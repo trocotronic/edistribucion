@@ -474,7 +474,7 @@ class Edistribucion():
             1362,
             "WP_Measure_v3_CTRL/ACTION$getChartPointsByRange",
             "WP_Measure_Detail_Filter_Advanced_v3",
-            {"contId": cont, "startDate": startDate, "endDate": endDate}
+            {"contId": cont, "type": 4, "startDate": startDate, "endDate": endDate}
         )
 
         r = self.__run_action_command(action)
