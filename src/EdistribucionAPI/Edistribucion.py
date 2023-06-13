@@ -7,7 +7,7 @@ Created on Wed May 20 11:42:56 2020
 
 __VERSION__ = '0.6.0'
 
-import requests, pickle, json, os, math
+import requests, pickle, json, os, math, re
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, unquote
 import logging
@@ -295,10 +295,16 @@ class Edistribucion():
             raise EdisError('auraConfig not found. Cannot continue')
         ix = r.text.find('{',ix)
         ed = r.text.find(';',ix)
-        jr = json.loads(r.text[ix:ed])
+
+        ''' jr = json.loads(r.text[ix:ed])
         if ('token' not in jr):
+            raise EdisError('token not found. Cannot continue')'''
+
+        rt = r.text[ix:ed]
+        if ('token' not in rt):
             raise EdisError('token not found. Cannot continue')
-        self.__token = jr['token']
+        tk = re.search('"token":"([^"]*)"', r.text).groups(0)[0]
+        self.__token = tk
         logging.info('Token received!')
         logging.debug(self.__token)
         logging.info('Retreiving account info')
