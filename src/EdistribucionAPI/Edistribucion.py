@@ -7,13 +7,14 @@ Created on Wed May 20 11:42:56 2020
 
 __VERSION__ = '0.6.0'
 
-import requests, pickle, json, os, math
+import requests, pickle, json
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote
 import logging
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
 import credentials
+from pyjsparser import parse as jsparse
 
 UTC = tzutc()
 
@@ -239,6 +240,25 @@ class Edistribucion():
             return self.__force_login()
         return True
 
+    def __get_token(self):
+        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/')
+        soup = BeautifulSoup(r.text, 'html.parser')
+        scripts = soup.find_all('script')
+        logging.info('Loading token scripts')
+        for s in scripts:
+            if ('auraConfig' in s.text):
+                prsr = jsparse(s.text)
+                for b in prsr['body']:
+                    decls = b.get('expression', {}).get('callee', {}).get('body', {}).get('body', [])
+                    for d in decls:
+                        if (d.get('type', None) == 'VariableDeclaration'):
+                            for dc in d.get('declarations', []):
+                                if (dc.get('id', {}).get('name', None) == 'auraConfig'):
+                                    for prop in dc.get('init', {}).get('properties', []):
+                                        if (prop.get('key', {}).get('value', None) == 'token'):
+                                            return prop.get('value', {}).get('value', None)
+        return None
+
     def __force_login(self, recursive=False):
         logging.warning('Forcing login')
         r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
@@ -289,16 +309,9 @@ class Edistribucion():
         logging.info('Accessing to frontdoor')
         r = self.__get_url(jr['events'][0]['attributes']['values']['url'])
         logging.info('Accessing to landing page')
-        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/')
-        ix = r.text.find('auraConfig')
-        if (ix == -1):
-            raise EdisError('auraConfig not found. Cannot continue')
-        ix = r.text.find('{',ix)
-        ed = r.text.find(';',ix)
-        jr = json.loads(r.text[ix:ed])
-        if ('token' not in jr):
+        self.__token = self.__get_token()
+        if (not self.__token):
             raise EdisError('token not found. Cannot continue')
-        self.__token = jr['token']
         logging.info('Token received!')
         logging.debug(self.__token)
         logging.info('Retreiving account info')
