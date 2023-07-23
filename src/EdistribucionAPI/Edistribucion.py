@@ -246,8 +246,8 @@ class Edistribucion():
         scripts = soup.find_all('script')
         logging.info('Loading token scripts')
         for s in scripts:
-            if ('auraConfig' in s.text):
-                prsr = jsparse(s.text)
+            if ('auraConfig' in s.string):
+                prsr = jsparse(s.string)
                 for b in prsr['body']:
                     decls = b.get('expression', {}).get('callee', {}).get('body', {}).get('body', [])
                     for d in decls:
