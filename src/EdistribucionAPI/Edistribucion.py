@@ -168,8 +168,8 @@ class Edistribucion():
     def __command(self, command, post=None, dashboard=None, accept='*/*', content_type=None, recursive=False):
         if (not dashboard):
             dashboard = self.__dashboard
-        if (self.__command_index):
-            command = 'r='+self.__command_index+'&'
+        if (self.__command_index >= 0):
+            command = f'r={self.__command_index}&{command}'
             self.__command_index += 1
         logging.info('Preparing command: %s', command)
         if (post):
