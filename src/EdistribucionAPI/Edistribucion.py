@@ -145,8 +145,10 @@ class Edistribucion():
         logging.info('Sending %s request to %s', r.request.method, r.url)
         logging.debug('Parameters: %s', r.request.url)
         logging.debug('Headers: %s', r.request.headers)
+        logging.debug(f'Post data: {post}')
         logging.info('Response with code: %d', r.status_code)
         logging.debug('Headers: %s', r.headers)
+        logging.debug(f'Cookies: {r.cookies.get_dict()}')
         logging.debug('History: %s', r.history)
         if r.status_code >= 400:
             try:
@@ -174,7 +176,7 @@ class Edistribucion():
         logging.info('Preparing command: %s', command)
         if (post):
             post['aura.context'] = self.__context
-            post['aura.pageURI'] = '/areaprivada/s/wp-online-access'
+            post['aura.pageURI'] = '/areaprivada/s/'
             post['aura.token'] = self.__token
             logging.debug('POST data: %s', post)
         logging.debug('Dashboard: %s', dashboard)
@@ -205,6 +207,14 @@ class Edistribucion():
             else:
                 logging.warning('Redirection received twice. Aborting command.')
         if ('json' in r.headers['Content-Type']):
+            if ('Invalid token' in r.text):
+                if (not recursive):
+                    self.__session = requests.Session()
+                    #self.__force_login()
+                    self.__token = self.__get_token()
+                    self.__command(command=command, post=post, dashboard=dashboard, accept=accept, content_type=content_type, recursive=True)
+                else:
+                    logging.warning('Token expired. Cannot refresh')
             jr = r.json()
             if (jr['actions'][0]['state'] != 'SUCCESS'):
                 if (not recursive):
@@ -257,7 +267,9 @@ class Edistribucion():
                                     for prop in dc.get('init', {}).get('properties', []):
                                         if (prop.get('key', {}).get('value', None) == 'eikoocnekot'):
                                             cookie_var = prop.get('value', {}).get('value', None)
-                                            return self.__session.cookies.get_dict().get(cookie_var, None)
+                                            ret = self.__session.cookies.get_dict().get(cookie_var, None)
+                                            del self.__session.cookies[cookie_var]
+                                            return ret
         return None
 
     def __force_login(self, recursive=False):
@@ -276,7 +288,8 @@ class Edistribucion():
                 continue
             if ('resources.js' in src):
                 unq = unquote(src)
-                self.__context = unq[unq.find('{'):unq.rindex('}')+1]
+                #self.__context = unq[unq.find('{'):unq.rindex('}')+1]
+                self.__context = '{"mode":"PROD","fwuid":"LU1oNENmckdVUXNqVGtLeG5odmktZ2Rkdk8xRWxIam5GeGw0LU1mRHRYQ3cyNDYuMTUuMS0zLjAuNA","app":"siteforce:communityApp","loaded":{"APPLICATION@markup://siteforce:communityApp":"8srl03VqKMnukxbiM5O73w"},"dn":[],"globals":{},"uad":false}'
         logging.info('Performing login routine')
 
         params = {
@@ -297,7 +310,7 @@ class Edistribucion():
                 'aura.pageURI':'/areaprivada/s/login/?language=es&startURL=%2Fareaprivada%2Fs%2F&ec=302',
                 'aura.token':'undefined',
                 }
-        r = self.__get_url(self.__dashboard+'other.LightningLoginForm.login=1',post=data)
+        r = self.__get_url(self.__dashboard+'r=1&other.LightningLoginForm.login=1',post=data)
         #print(r.text)
         if ('/*ERROR*/' in r.text):
             if ('invalidSession' in r.text and not recursive):
