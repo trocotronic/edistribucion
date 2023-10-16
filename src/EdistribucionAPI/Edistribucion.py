@@ -255,8 +255,9 @@ class Edistribucion():
                             for dc in d.get('declarations', []):
                                 if (dc.get('id', {}).get('name', None) == 'auraConfig'):
                                     for prop in dc.get('init', {}).get('properties', []):
-                                        if (prop.get('key', {}).get('value', None) == 'token'):
-                                            return prop.get('value', {}).get('value', None)
+                                        if (prop.get('key', {}).get('value', None) == 'eikoocnekot'):
+                                            cookie_var = prop.get('value', {}).get('value', None)
+                                            return self.__session.cookies.get_dict().get(cookie_var, None)
         return None
 
     def __force_login(self, recursive=False):
