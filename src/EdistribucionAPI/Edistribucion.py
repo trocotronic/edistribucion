@@ -289,7 +289,7 @@ class Edistribucion():
             if ('resources.js' in src):
                 unq = unquote(src)
                 #self.__context = unq[unq.find('{'):unq.rindex('}')+1]
-                self.__context = '{"mode":"PROD","fwuid":"MDM0c01pMVUtd244bVVLc2VRYzQ2UWRkdk8xRWxIam5GeGw0LU1mRHRYQ3cyNDYuMTUuMi0zLjAuNA","app":"siteforce:communityApp","loaded":{"APPLICATION@markup://siteforce:loginApp2":"gYLnBR7JPOzHCaMCDxTL3w"},"dn":[],"globals":{},"uad":false}'
+                self.__context = '{"mode":"PROD","fwuid":"MDM0c01pMVUtd244bVVLc2VRYzQ2UWRkdk8xRWxIam5GeGw0LU1mRHRYQ3cyNDYuMTUuMy0zLjAuNA","app":"siteforce:communityApp","loaded":{"APPLICATION@markup://siteforce:loginApp2":"gYLnBR7JPOzHCaMCDxTL3w"},"dn":[],"globals":{},"uad":false}'
         logging.info('Performing login routine')
 
         params = {
