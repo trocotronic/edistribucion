@@ -252,6 +252,7 @@ class Edistribucion():
 
     def __get_token(self):
         r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/')
+        self.__update_context(r.text)
         soup = BeautifulSoup(r.text, 'html.parser')
         scripts = soup.find_all('script')
         logging.info('Loading token scripts')
@@ -272,14 +273,8 @@ class Edistribucion():
                                             return ret
         return None
 
-    def __force_login(self, recursive=False):
-        logging.warning('Forcing login')
-        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
-        ix = r.text.find('auraConfig')
-        if (ix == -1):
-            raise EdisError('auraConfig not found. Cannot continue')
-
-        soup = BeautifulSoup(r.text, 'html.parser')
+    def __update_context(self, text):
+        soup = BeautifulSoup(text, 'html.parser')
         scripts = soup.find_all('script')
         logging.info('Loading scripts')
         for s in scripts:
@@ -288,8 +283,21 @@ class Edistribucion():
                 continue
             if ('resources.js' in src):
                 unq = unquote(src)
-                #self.__context = unq[unq.find('{'):unq.rindex('}')+1]
-                self.__context = '{"mode":"PROD","fwuid":"MDM0c01pMVUtd244bVVLc2VRYzQ2UWRkdk8xRWxIam5GeGw0LU1mRHRYQ3cyNDYuMTUuMy0zLjAuNA","app":"siteforce:communityApp","loaded":{"APPLICATION@markup://siteforce:loginApp2":"gYLnBR7JPOzHCaMCDxTL3w"},"dn":[],"globals":{},"uad":false}'
+                try:
+                    path = unq[unq.find('{'):unq.rindex('}')+1]
+                    j = json.loads(path)
+                    self.__context = f'{{"mode":"{j["mode"]}","fwuid":"{j["fwuid"]}","app":"{j["app"]}","loaded":{json.dumps(j["loaded"]).replace(" ","")},"dn":[],"globals":{{}},"uad":false}}'
+                except Exception:
+                    raise EdisError('Cannot obtain context')
+
+    def __force_login(self, recursive=False):
+        logging.warning('Forcing login')
+        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
+        ix = r.text.find('auraConfig')
+        if (ix == -1):
+            raise EdisError('auraConfig not found. Cannot continue')
+
+        self.__update_context(r.text)
         logging.info('Performing login routine')
 
         params = {
