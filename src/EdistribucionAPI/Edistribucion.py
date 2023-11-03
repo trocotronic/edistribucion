@@ -528,6 +528,16 @@ class Edistribucion():
                 return r['data']['lstData']
         return []
 
+    def get_rols(self):
+        action = EdistribucionMessageAction(
+            113,
+            "WP_Monitor_CTRL/ACTION$getLoginInfo",
+            "WP_Monitor",
+            {"serviceNumber":""}
+        )
+        r = self.__run_action_command(action)
+        return json.loads(r['listOptions'])
+        
     def set_rol(self, visId):
         action = EdistribucionMessageAction(
             595,
