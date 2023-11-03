@@ -514,3 +514,48 @@ class Edistribucion():
 
         r = self.__run_action_command(action)
         return r['data']['lstData']
+
+    def  get_meas_dates(self, cont, start, end):
+        action = EdistribucionMessageAction(
+            965,
+            "WP_Measure_v3_CTRL/ACTION$getChartPointsByRange",
+            "WP_Measure_Detail_Filter_Advanced_v3",
+            {"contId":""+cont['Id']+"","type":"4","startDate":""+start+"","endDate":""+end+""}
+        )
+        r = self.__run_action_command(action)
+        if 'data' in r.keys():
+            if 'lstData' in r['data'].keys():
+                return r['data']['lstData']
+        return []
+
+    def set_rol(self, visId):
+        action = EdistribucionMessageAction(
+            595,
+            "WP_ProfileMenu_CTRL/ACTION$saveRole",
+            "WP_ProfileMenu",
+            {"visId":""+visId+""}
+        )
+        r = self.__run_action_command(action)
+        return r
+
+    def get_authorized(self):
+        action = EdistribucionMessageAction(
+            390,
+            "WP_Monitor_CTRL/ACTION$getLoginInfo",
+            "WP_Monitor",
+            {"serviceNumber":"S001"}
+        )
+        r = self.__run_action_command(action)
+        return r['authList']
+
+    def get_authorized_cups(self, id):
+
+        action = EdistribucionMessageAction(
+            339,
+            "WP_Measure_v3_CTRL/ACTION$getListCups",
+            "WP_Measure_List_v4",
+            {"sIdentificador":""+id+""}
+        )
+        r = self.__run_action_command(action)
+        return r
+
