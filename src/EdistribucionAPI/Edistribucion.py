@@ -388,7 +388,7 @@ class Edistribucion():
     def get_meter(self, cups):
         action = EdistribucionMessageAction(
             522,
-            "WP_ContadorICP_F2_CTRL/ACTION$consultarContador",
+            "WP_ContadorICP_F2_CTRL/ACTION$consultarContador2",
             "WP_Reconnect_Detail",
             {"cupsId": cups}
         )
