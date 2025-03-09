@@ -69,6 +69,8 @@ class EdistribucionMessageAction(object):
 
     @property
     def descriptor(self):
+        if ('://' in self._descriptor):
+            return self._descriptor
         return f"apex://{self._descriptor}"
 
     @descriptor.setter
@@ -77,6 +79,8 @@ class EdistribucionMessageAction(object):
 
     @property
     def callingDescriptor(self):
+        if (not self._callingDescriptor):
+            return "UNKNOWN"
         return f"markup://c:{self._callingDescriptor}"
 
     @callingDescriptor.setter
@@ -102,7 +106,12 @@ class Edistribucion():
     ACCESS_FILE = 'edistribucion.access'
     __token = 'undefined'
     __credentials = {}
-    __dashboard = 'https://zonaprivada.edistribucion.com/areaprivada/s/sfsites/aura?'
+    __host = 'https://zonaprivada.edistribucion.com'
+    __part_site = '/areaprivada'
+    __site = __part_site+'/s'
+    __full_site = __host+__site
+
+    __dashboard = __full_site+'/sfsites/aura?'
     __command_index = 0
     __identities = {}
     __context = None
@@ -176,7 +185,7 @@ class Edistribucion():
         logging.info('Preparing command: %s', command)
         if (post):
             post['aura.context'] = self.__context
-            post['aura.pageURI'] = '/areaprivada/s/'
+            post['aura.pageURI'] = self.__site+'/'
             post['aura.token'] = self.__token
             logging.debug('POST data: %s', post)
         logging.debug('Dashboard: %s', dashboard)
@@ -251,7 +260,7 @@ class Edistribucion():
         return True
 
     def __get_token(self):
-        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/')
+        r = self.__get_url(self.__full_site)
         self.__update_context(r.text)
         soup = BeautifulSoup(r.text, 'html.parser')
         scripts = soup.find_all('script')
@@ -292,7 +301,8 @@ class Edistribucion():
 
     def __force_login(self, recursive=False):
         logging.warning('Forcing login')
-        r = self.__get_url('https://zonaprivada.edistribucion.com/areaprivada/s/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
+        r = self.__get_url(self.__full_site)
+        r = self.__get_url(self.__full_site+'/login?ec=302&startURL=%2Fareaprivada%2Fs%2F')
         ix = r.text.find('auraConfig')
         if (ix == -1):
             raise EdisError('auraConfig not found. Cannot continue')
@@ -303,7 +313,7 @@ class Edistribucion():
         params = {
             "username": self.__credentials['user'],
             "password": self.__credentials['password'],
-            "startUrl": "/areaprivada/s/"
+            "startUrl": self.__site+'/'
         }
         action = EdistribucionMessageAction(
             91,
@@ -315,8 +325,8 @@ class Edistribucion():
         data = {
                 'message': '{"actions":[' + str(action) + ']}',
                 'aura.context':self.__context,
-                'aura.pageURI':'/areaprivada/s/login/?language=es&startURL=%2Fareaprivada%2Fs%2F&ec=302',
-                'aura.token':'undefined',
+                'aura.pageURI':self.__site+'/login/?language=es&startURL=%2Fareaprivada%2Fs%2F&ec=302',
+                'aura.token':'null',
                 }
         r = self.__get_url(self.__dashboard+'r=1&other.LightningLoginForm.login=1',post=data)
         #print(r.text)
@@ -330,13 +340,16 @@ class Edistribucion():
             raise EdisError('Wrong login response. Cannot continue')
         logging.info('Accessing to frontdoor')
         r = self.__get_url(jr['events'][0]['attributes']['values']['url'])
+
+        logging.info('Accessing to loginflow')
+        self.__login_flow()
         logging.info('Accessing to landing page')
         self.__token = self.__get_token()
         if (not self.__token):
             raise EdisError('token not found. Cannot continue')
         logging.info('Token received!')
         logging.debug(self.__token)
-        logging.info('Retreiving account info')
+        logging.info('Retrieving account info')
         r = self.get_login_info()
         self.__identities['account_id'] = r['visibility']['Id']
         self.__identities['name'] = r['Name']
@@ -346,6 +359,31 @@ class Edistribucion():
             pickle.dump(self.__session.cookies, f)
         logging.debug('Saving session')
         self.__save_access()
+
+    def __login_flow(self):
+        r = self.__get_url(self.__host+self.__part_site+'/loginflow/lightningLoginFlow.apexp?retURL=%2Fareaprivada%2Fs%2F&sparkID=Disable_users_with_many_login_attempts_Screen_Flow')
+        soup = BeautifulSoup(r.text, 'html.parser')
+        form = soup.find('form')
+        if (not form):
+            raise EdisError('LoginFlow form not found. Cannot continue')
+        logout_action = form.get('action')
+        logout_view_params = {
+            'AJAXREQUEST': '_viewRoot',
+            'thePage:j_id8:j_id9': "thePage:j_id8:j_id9",
+            'url': self.__site+'/'
+        }
+        inputs = form.find_all('input', {'type':'hidden'})
+        for i in inputs:
+            logout_view_params[i.get('name')] = i.get('value')
+
+        span = soup.find('span', {'id':'ajax-view-state-page-container'})
+        if (not span):
+            raise EdisError('LoginFlow span not found. Cannot continue')
+        inputs = span.find_all('input', {'type':'hidden'})
+        for i in inputs:
+            logout_view_params[i.get('name')] = i.get('value')
+
+        r = self.__get_url(self.__host+logout_action, post=logout_view_params)
 
     def __run_action_command(self, action, command=None):
         data = {'message': '{"actions":[' + str(action) + ']}'}
