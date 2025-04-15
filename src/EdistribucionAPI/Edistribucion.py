@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from dateutil.tz import tzutc
 import credentials
 from pyjsparser import parse as jsparse
+import re
 
 UTC = tzutc()
 
@@ -174,7 +175,7 @@ class Edistribucion():
                 logging.debug('Response error is not JSON format')
                 msg = "Error: status code {}".format(r.status_code)
             raise UrlError(r.status_code, msg, r)
-        return r
+        return self.__execute_redirect(r)
 
     def __command(self, command, post=None, dashboard=None, accept='*/*', content_type=None, recursive=False):
         if (not dashboard):
@@ -299,6 +300,12 @@ class Edistribucion():
                 except Exception:
                     raise EdisError('Cannot obtain context')
 
+    def __execute_redirect(self, r):
+        url = re.findall(r"window\.location\.replace\([\'\"]([^)'\"]*)", r.text)
+        if (url):
+            return self.__execute_redirect(self.__get_url(url[0]))
+        return r
+
     def __force_login(self, recursive=False):
         logging.warning('Forcing login')
         r = self.__get_url(self.__full_site)
@@ -340,9 +347,6 @@ class Edistribucion():
             raise EdisError('Wrong login response. Cannot continue')
         logging.info('Accessing to frontdoor')
         r = self.__get_url(jr['events'][0]['attributes']['values']['url'])
-
-        logging.info('Accessing to loginflow')
-        self.__login_flow()
         logging.info('Accessing to landing page')
         self.__token = self.__get_token()
         if (not self.__token):
