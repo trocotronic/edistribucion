@@ -5,7 +5,7 @@ Created on Wed May 20 11:42:56 2020
 @author: trocotronic
 """
 
-__VERSION__ = '0.8.1'
+__VERSION__ = '0.9.0'
 
 import requests, pickle, json
 from bs4 import BeautifulSoup
